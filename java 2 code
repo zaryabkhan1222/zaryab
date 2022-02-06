@@ -1,0 +1,292 @@
+package com.website.pccontroller;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+import com.airbnb.lottie.LottieAnimationView;
+import org.json.JSONArray;
+import org.json.JSONObject;
+33
+import java.util.ArrayList;
+public class DashboardActivity extends AppCompatActivity {
+ private Spinner spn;
+ private ArrayList<UserPcPojo> userPcPojos;
+ private Dialog dialogLoader;
+ private UserPcPojo pojo;
+ private TextView numPcTV;
+ private int SRC_CMD;
+ private GetRemoteCmdTask task;
+ private LinearLayout lLay;
+ private LinearLayout backgroundLayout;
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_dashboard);
+ Toolbar toolbar = findViewById(R.id.toolbar_add_food);
+
+toolbar.setNavigationIcon(android.support.v7.appcompat.R.drawable.abc_ic_ab_back_m
+aterial);
+ setSupportActionBar(toolbar);
+ initUI();
+ }
+ private void initUI() {
+ spn = findViewById(R.id.spn_user_pcs);
+ numPcTV = findViewById(R.id.tv_numofpc);
+ lLay = findViewById(R.id.llay);
+ getData();
+ }
+ private void getData() {
+ new GetUserPCsTask().execute("all");
+ }
+ private void stopAnimation() {
+ if (dialogLoader != null && dialogLoader.isShowing())
+ dialogLoader.cancel();
+ }
+ private void startAnimation() {
+ dialogLoader = new Dialog(DashboardActivity.this,
+R.style.AppTheme_NoActionBar);
+ dialogLoader.getWindow().setBackgroundDrawable(new
+ColorDrawable(Color.parseColor("#8D000000")));
+ final View view =
+getLayoutInflater().inflate(R.layout.custom_dialog_loader, null);
+ LottieAnimationView animationView = view.findViewById(R.id.loader);
+ animationView.playAnimation();
+ dialogLoader.setContentView(view);
+ dialogLoader.setCancelable(false);
+ dialogLoader.show();
+ }
+ public void onLogout(View view) {
+ Intent intentDashboard = new Intent(this, LoginActivity.class);
+34
+ startActivity(intentDashboard);
+ }
+ private class GetUserPCsTask extends AsyncTask<String, String, String> {
+ @Override
+ protected void onPreExecute() {
+ super.onPreExecute();
+ startAnimation();
+ }
+ @Override
+ protected void onPostExecute(String s) {
+ super.onPostExecute(s);
+ Log.i(UtilConstants.REPLY, "onPostExecute: " + s);
+ stopAnimation();
+ if (s.contains("Unable to resolve host")) {
+ AlertDialog.Builder ad = new
+AlertDialog.Builder(DashboardActivity.this);
+ ad.setTitle("Unable to Connect!");
+ ad.setMessage("Check your Internet Connection,Unable to connect
+the Server");
+ ad.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+ @Override
+public void onClick(DialogInterface dialog, int which) {
+ dialog.cancel();
+ }
+ });
+ ad.show();
+ } else {
+ try {
+ JSONObject json = new JSONObject(s);
+String ans = json.getString("status");
+userPcPojos = new ArrayList<>();
+ if (ans.compareTo("ok") == 0) {
+ JSONArray jarry = json.getJSONArray("Data");
+Log.d(UtilConstants.TAG, jarry.length() + " : main arr");
+ for (int i = 0; i < jarry.length(); i++) {
+ JSONObject jobj = jarry.getJSONObject(i);
+pojo = new UserPcPojo(jobj.getString("data0"),
+ jobj.getString("data1"),
+ jobj.getString("data2"));
+ userPcPojos.add(pojo);
+ }
+setSpinner();
+if (userPcPojos.size() == 1)
+ numPcTV.setText(userPcPojos.size() + " PC found.");
+ else numPcTV.setText(userPcPojos.size() + " PCs found.");
+ } else if (ans.compareTo("no") == 0) {
+ numPcTV.setVisibility(View.VISIBLE);
+ numPcTV.setText(userPcPojos.size() + " PC found. no PC is
+registered");
+ } else if (ans.compareTo("error") == 0) {
+ String error = json.getString("Data");
+Toast.makeText(DashboardActivity.this, error,
+Toast.LENGTH_SHORT).show();
+ }
+ } catch (Exception e) {
+ e.printStackTrace();
+Toast.makeText(DashboardActivity.this, e.getMessage(), 
+35
+Toast.LENGTH_SHORT).show();
+ }
+ }
+ }
+ @Override
+ protected String doInBackground(String... strings) {
+ String result;
+ RestAPI restAPI = new RestAPI();
+ try {
+ JSONObject object = restAPI.getusers(strings[0]);
+ JSONParser parser = new JSONParser();
+ result = parser.parseJSON(object);
+ } catch (Exception e) {
+ e.printStackTrace();
+ result = e.getMessage();
+ }
+ return result;
+ }
+ }
+ private class GetRemoteCmdTask extends AsyncTask<String, String, String> {
+ @Override
+ protected void onPreExecute() {
+ super.onPreExecute();
+ startAnimation();
+ }
+ @Override
+ protected void onPostExecute(String s) {
+ super.onPostExecute(s);
+ Log.i(UtilConstants.REPLY, "onPostExecute: " + s);
+ stopAnimation();
+ if (s.contains("Unable to resolve host")) {
+ AlertDialog.Builder ad = new
+AlertDialog.Builder(DashboardActivity.this);
+ ad.setTitle("Unable to Connect!");
+ ad.setMessage("Check your Internet Connection,Unable to connect
+the Server");
+ ad.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+ @Override
+public void onClick(DialogInterface dialog, int which) {
+ dialog.cancel();
+ }
+ });
+ ad.show();
+ } else {
+ try {
+ JSONObject json = new JSONObject(s);
+String ans = json.getString("status");
+if (ans.compareTo("true") == 0) {
+ Snackbar.make(lLay, "Remote PC operation command sent
+successfully", Snackbar.LENGTH_LONG).show();
+ } else if (ans.compareTo("no") == 0) {
+ Snackbar.make(lLay, "user PC is offline",
+Snackbar.LENGTH_LONG).show();
+ } else if (ans.compareTo("error") == 0) {
+ String error = json.getString("Data");
+Toast.makeText(DashboardActivity.this, error, 
+36
+Toast.LENGTH_SHORT).show();
+ }
+ } catch (Exception e) {
+ e.printStackTrace();
+Toast.makeText(DashboardActivity.this, e.getMessage(),
+Toast.LENGTH_SHORT).show();
+ }
+ }
+ }
+ @Override
+ protected String doInBackground(String... strings) {
+ String result;
+ RestAPI restAPI = new RestAPI();
+ try {
+ JSONObject object = restAPI.controlPC(strings[0], strings[1]);
+ JSONParser parser = new JSONParser();
+ result = parser.parseJSON(object);
+ } catch (Exception e) {
+ e.printStackTrace();
+ result = e.getMessage();
+ }
+ return result;
+ }
+ }
+ private void setSpinner() {
+ if (spn.getVisibility() == View.GONE)
+ spn.setVisibility(View.VISIBLE);
+ if (userPcPojos.size() > 0)
+ spn.setAdapter(new SpnAdap(DashboardActivity.this, userPcPojos));
+ }
+ public void onWebSnapClicked(View view) {
+ if (userPcPojos != null)
+ startViewShot(7);
+ }
+ private void startViewShot(int i) {
+ if (userPcPojos.size() > 0) {
+ Intent intent;
+ intent = new Intent(DashboardActivity.this, ViewShotActivity.class);
+ if (i == 7) {
+ intent.putExtra(UtilConstants.SRCKEY, "Web");
+ } else if (i == 3)
+ intent.putExtra(UtilConstants.SRCKEY, "Snap");
+ intent.putExtra(UtilConstants.UID_KEY,
+userPcPojos.get(spn.getSelectedItemPosition()).getId());
+ startActivity(intent);
+ }
+ }
+ @Override
+ public boolean onSupportNavigateUp() {
+ onBackPressed();
+ return super.onSupportNavigateUp();
+ }
+ public void onPrntScnClicked(View view) {
+37
+ if (userPcPojos != null)
+ if
+(userPcPojos.get(spn.getSelectedItemPosition()).getStatus().equalsIgnoreCase("onli
+ne"))
+ startViewShot(3);
+ }
+ public void onHoldClicked(View view) {
+ if (userPcPojos != null)
+ if
+(userPcPojos.get(spn.getSelectedItemPosition()).getStatus().equalsIgnoreCase("onli
+ne")) {
+ getHoldTask(2, view.getId());
+ }
+ }
+ private void getHoldTask(int cmd, int id) {
+ SRC_CMD = cmd;
+ backgroundLayout = findViewById(id);
+ task = new GetRemoteCmdTask();
+ task.execute(userPcPojos.get(spn.getSelectedItemPosition()).getId(),
+String.valueOf(SRC_CMD));
+ }
+ public void onEnabledClick(View view) {
+ if (userPcPojos != null)
+ if
+(userPcPojos.get(spn.getSelectedItemPosition()).getStatus().equalsIgnoreCase("onli
+ne"))
+ getHoldTask(4, view.getId());
+ }
+ public void onShutdownClicked(View view) {
+ if (userPcPojos != null)
+ if
+(userPcPojos.get(spn.getSelectedItemPosition()).getStatus().equalsIgnoreCase("onli
+ne"))
+ getHoldTask(5, view.getId());
+ }
+ @Override
+ public boolean onCreateOptionsMenu(Menu menu) {
+ getMenuInflater().inflate(R.menu.menu_refresh_userspc, menu);
+ return true;
+ }
+ @Override
+ public boolean onOptionsItemSelected(MenuItem item) {
+ if (item.getItemId() == R.id.mi_refresh) {
+ getData();
+ }
+ return super.onOptionsItemSelected(item);
+ }
+}
