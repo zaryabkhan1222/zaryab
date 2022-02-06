@@ -1,0 +1,54 @@
+package com.website.pccontroller;
+import android.content.Intent;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+public class LoginActivity extends AppCompatActivity {
+ private EditText usernameET, passET;
+ private LinearLayout lLay;
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ if (!LoginSharedPref.getUnameKey(LoginActivity.this).equalsIgnoreCase(""))
+{
+ Intent intentDashboard = new Intent(LoginActivity.this,
+DashboardActivity.class);
+ startActivity(intentDashboard);
+ finish();
+ }
+ setContentView(R.layout.activity_login);
+ initUI();
+ }
+ private void initUI() {
+ usernameET = findViewById(R.id.et_username_log);
+ passET = findViewById(R.id.et_pass_log);
+ lLay = findViewById(R.id.ll_login_ui);
+ }
+ public void onLoginClicked(View view) {
+ if (usernameET.getText().length() == 0) {
+ Snackbar.make(lLay, "Please enter username",
+Snackbar.LENGTH_LONG).show();
+ } else if (passET.getText().length() == 0) {
+ Snackbar.make(lLay, "Please enter password",
+Snackbar.LENGTH_LONG).show();
+ } else {
+ if (UtilConstants.ADMIN_UNAME.equals(usernameET.getText().toString())
+&&
+ UtilConstants.ADMIN_PASS.equals(passET.getText().toString()))
+{
+ LoginSharedPref.setUnameKey(LoginActivity.this,
+usernameET.getText().toString());
+ Intent intentDashboard = new Intent(LoginActivity.this,
+DashboardActivity.class);
+ startActivity(intentDashboard);
+ finish();
+ Log.i(UtilConstants.TAG, "onLoginClicked: " +
+usernameET.getText().toString() + passET.getText().toString());
+ } else {
+ //
+ Snackbar.make(lLay, "Login failed. Enter correct registered
+credentials", Snackbar.LENGTH_LONG).show();
